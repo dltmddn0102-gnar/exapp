@@ -23,8 +23,8 @@ st.divider()
 
 st.subheader('상담 리스트')
 
-if 'applications' not in st.session_state:
-    st.session_state.applications = []
+if 'list' not in st.session_state:
+    st.session_state.list = []
 
 season = st.text_input(
     f'{APP_TITLE} 기수를 입력해주세요',
@@ -60,14 +60,14 @@ if st.button('신청'):
 
     if name.strip():
 
-        application = {
+        list = {
             'season': season,
             'name': name,
             'date': date,
             'time': time
         }
 
-        st.session_state.applications.append(application)
+        st.session_state.list.append(list)
         st.success('상담 신청이 접수되었습니다.')
     else:
         st.warning('이름을 입력하세요!')
@@ -76,17 +76,17 @@ st.divider()
 
 st.subheader('상담 신청 목록')
 
-if st.session_state.applications:
-    for i, application in enumerate(
-        st.session_state.applications,
+if st.session_state.list:
+    for i, list in enumerate(
+        st.session_state.list,
         start=1
     ):
         st.write(
             f'{i}. '
-            f'{APP_TITLE}기수: {application["season"]} | '
-            f'이름: {application["name"]} | '
-            f'희망 요일: {application["date"]} | '
-            f'상담 시간: {application["time"]}'
+            f'{APP_TITLE}기수: {list["season"]} | '
+            f'이름: {list["name"]} | '
+            f'희망 요일: {list["date"]} | '
+            f'상담 시간: {list["time"]}'
         )
 
 else:
