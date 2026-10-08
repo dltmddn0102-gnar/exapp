@@ -5,7 +5,7 @@
 # python -m streamlit run ./desktop/webservice/day31/exapp/exapp.py
 
 # Render Cloud 실행
-# streamlit run app.py --server.adress 0.0.0.0 --server.port $PORT
+# streamlit run app.py --server.address 0.0.0.0 --server.port $PORT
 
 import os
 import streamlit as st
