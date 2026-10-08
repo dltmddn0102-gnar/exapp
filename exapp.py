@@ -22,7 +22,7 @@ st.subheader('상담 리스트')
 # 세션 상태 초기화
 if 'consult_list' not in st.session_state:
     st.session_state.consult_list = []
-if 'completed_list' not in st.session_state:  # 상담 완료 목록 저장 공간 추가
+if 'completed_list' not in st.session_state:
     st.session_state.completed_list = []
 if 'verified' not in st.session_state:
     st.session_state.verified = False
@@ -57,7 +57,8 @@ if st.session_state.verified:
     )
     name = st.text_input(
         '이름',
-        placeholder='이름을 입력하세요.'
+        placeholder='이름을 입력하세요.',
+        key='input_name'
     )
     time = st.radio(
         '상담 희망 시간',
@@ -86,70 +87,101 @@ st.divider()
 date_order = {'월요일': 1, '화요일': 2, '수요일': 3, '목요일': 4, '금요일': 5, '토요일': 6, '일요일': 7}
 time_order = {'오전': 1, '오후': 2, '저녁': 3}
 
-# 3. 상담 신청 목록 섹션 (취소 / 완료 버튼 배치)
+# 리스트를 요일/시간 순으로 미리 정렬
+st.session_state.consult_list = sorted(
+    st.session_state.consult_list,
+    key=lambda x: (date_order.get(x['date'], 99), time_order.get(x['time'], 99))
+)
+st.session_state.completed_list = sorted(
+    st.session_state.completed_list,
+    key=lambda x: (date_order.get(x['date'], 99), time_order.get(x['time'], 99))
+)
+
+# 3. 상담 신청 목록 섹션
 st.subheader('상담 신청 목록')
 
 if st.session_state.consult_list:
-    # 요일 순 정렬 후, 같은 요일 내에서 시간 순으로 정렬
-    st.session_state.consult_list = sorted(
-        st.session_state.consult_list,
-        key=lambda x: (date_order.get(x['date'], 99), time_order.get(x['time'], 99))
-    )
+    search_req = st.text_input('🔍 신청 목록 이름 검색', placeholder='검색할 이름을 입력하세요.', key='search_req')
 
-    # 내용(70%), 완료 버튼(15%), 취소 버튼(15%) 비율 분할
-    for i, item in enumerate(st.session_state.consult_list, start=1):
+    # 누적 횟수를 실시간 계산하기 위한 딕셔너리 카운터
+    run_count = {}
+
+    display_index = 1
+    for orig_idx, item in enumerate(st.session_state.consult_list):
+        key_pair = (item['season'], item['name'])
+        # 처음 등장하면 1회, 이후 등장할 때마다 +1 증가
+        run_count[key_pair] = run_count.get(key_pair, 0) + 1
+        current_nth = run_count[key_pair]
+
+        # 검색 필터링 (화면 출력만 제어하고, 차수 카운트는 유지하여 정합성 보존)
+        if search_req.strip() and search_req.strip() not in item['name']:
+            continue
+
         col1, col2, col3 = st.columns([0.70, 0.15, 0.15])
 
         with col1:
             st.write(
-                f'{i}. '
+                f'{display_index}. '
                 f'{APP_TITLE} 기수: {item["season"]} | '
-                f'이름: {item["name"]} | '
+                f'이름: {item["name"]} **({current_nth}회)** | '
                 f'**{item["date"]}** | '
                 f'**{item["time"]}**'
             )
         with col2:
-            if st.button('완료', key=f'complete_{i}'):
-                # 신청 목록에서 꺼내어 완료 목록에 추가
-                completed_item = st.session_state.consult_list.pop(i - 1)
+            if st.button('완료', key=f'complete_{orig_idx}'):
+                completed_item = st.session_state.consult_list.pop(orig_idx)
                 st.session_state.completed_list.append(completed_item)
                 st.success(f'{item["name"]}님의 상담이 완료 처리되었습니다.')
                 st.rerun()
         with col3:
-            if st.button('취소', key=f'cancel_{i}'):
-                st.session_state.consult_list.pop(i - 1)
+            if st.button('취소', key=f'cancel_{orig_idx}'):
+                st.session_state.consult_list.pop(orig_idx)
                 st.success('신청이 취소되었습니다.')
                 st.rerun()
+        display_index += 1
+
+    if display_index == 1 and search_req.strip():
+        st.info('검색 결과와 일치하는 신청 내역이 없습니다.')
 else:
     st.info('아직 상담 신청 내역이 없습니다.')
 
 st.divider()
 
-# 4. 상담 완료 목록 섹션 (요청하신 기능 추가)
+# 4. 상담 완료 목록 섹션
 st.subheader('✅ 상담 완료 목록')
 
 if st.session_state.completed_list:
-    # 완료 목록도 가독성을 위해 요일/시간 순 정렬
-    st.session_state.completed_list = sorted(
-        st.session_state.completed_list,
-        key=lambda x: (date_order.get(x['date'], 99), time_order.get(x['time'], 99))
-    )
+    search_comp = st.text_input('🔍 완료 목록 이름 검색', placeholder='검색할 이름을 입력하세요.', key='search_comp')
 
-    # 내용(85%), 삭제 버튼(15%) 비율 분할
-    for j, item in enumerate(st.session_state.completed_list, start=1):
+    # 완료 목록용 개별 카운터
+    run_count_c = {}
+
+    display_index_c = 1
+    for orig_idx_c, item in enumerate(st.session_state.completed_list):
+        key_pair_c = (item['season'], item['name'])
+        run_count_c[key_pair_c] = run_count_c.get(key_pair_c, 0) + 1
+        current_nth_c = run_count_c[key_pair_c]
+
+        if search_comp.strip() and search_comp.strip() not in item['name']:
+            continue
+
         col_c1, col_c2 = st.columns([0.85, 0.15])
 
         with col_c1:
             st.write(
-                f'{j}. '
-                f'[{APP_TITLE} {item["season"]}] {item["name"]}님 '
+                f'{display_index_c}. '
+                f'[{APP_TITLE} {item["season"]}] {item["name"]}님 **({current_nth_c}회)** '
                 f'({item["date"]} / {item["time"]}) - 완료됨'
             )
         with col_c2:
-            if st.button('삭제', key=f'delete_done_{j}'):
-                st.session_state.completed_list.pop(j - 1)
+            if st.button('삭제', key=f'delete_done_{orig_idx_c}'):
+                st.session_state.completed_list.pop(orig_idx_c)
                 st.success('완료 내역이 삭제되었습니다.')
                 st.rerun()
+        display_index_c += 1
+
+    if display_index_c == 1 and search_comp.strip():
+        st.info('검색 결과와 일치하는 완료 내역이 없습니다.')
 else:
     st.info('완료된 상담 내역이 없습니다.')
 
@@ -157,7 +189,7 @@ st.divider()
 
 st.subheader('환경변수 설정 확인')
 if APP_GREETING and APP_TITLE:
-    st.success('APP_GREETING와 APP_TITLE 환경변수를 성공적으로 읽었습니다!')
+    st.success('APP_GREETING와 APP_TITLE environment 변수를 성공적으로 읽었습니다!')
     st.write(f'현재 환경변수 설정 값: {APP_GREETING}, {APP_TITLE}')
 else:
     st.info('환경변수가 설정되지 않았습니다.')
