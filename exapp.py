@@ -102,3 +102,5 @@ if APP_GREETING and APP_TITLE:
 
 else:
     st.info('환경변수가 설정되지 않았습니다.')
+
+st.warning('공사중: 리스트 요일,시간순 정렬, 기수 입력 버튼 클릭 안하면 신청버튼x 등 기능추가')
